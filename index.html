@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Todo App</title>
+    <style>
+        :root {
+            --primary-color: #4285F4;
+            --secondary-color: #f1f1f1;
+            --text-color: #333;
+            --background-color: #fff;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .dark-mode {
+            --primary-color: #3367D6;
+            --secondary-color: #333;
+            --text-color: #f1f1f1;
+            --background-color: #222;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: var(--secondary-color);
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1, h2 {
+            color: var(--primary-color);
+        }
+
+        input[type="text"], input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: var(--secondary-color);
+            margin-bottom: 10px;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 4px;
+        }
+
+        .error {
+            color: red;
+            margin-bottom: 10px;
+        }
+
+        #auth-container, #app-container {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #sync-status {
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .google-btn {
+            background-color: #DB4437;
+        }
+
+        .auth-options {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="auth-container">
+            <h2 id="auth-title">Login</h2>
+            <div id="auth-error" class="error"></div>
+            <form id="auth-form">
+                <input type="email" id="auth-email" placeholder="Email" required>
+                <input type="password" id="auth-password" placeholder="Password" required>
+                <div class="auth-options">
+                    <button type="submit" id="auth-submit">Login</button>
+                    <button type="button" id="google-signin" class="google-btn">Sign in with Google</button>
+                </div>
+            </form>
+            <p id="auth-switch">Don't have an account? <a href="#" id="auth-toggle">Sign up</a></p>
+        </div>
+
+        <div id="app-container">
+            <h1>Advanced Todo App</h1>
+            <div id="user-info"></div>
+            <button id="sign-out">Sign Out</button>
+            <button id="theme-toggle">Toggle Theme</button>
+            <div id="sync-status"></div>
+            <form id="todo-form">
+                <input type="text" id="todo-input" placeholder="Enter a new todo" required>
+                <button type="submit">Add Todo</button>
+            </form>
+            <ul id="todo-list"></ul>
+            <div class="loading" id="loading">Loading...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCwMxTd7br21W-pGeOF3XQfSXTqD4Ysvwo",
+            authDomain: "adv-my-todo-project.firebaseapp.com",
+            projectId: "adv-my-todo-project",
+            storageBucket: "adv-my-todo-project.appspot.com",
+            messagingSenderId: "883214688228",
+            appId: "1:883214688228:web:e52b40224c95560e37f1f1"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // DOM Elements
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const authForm = document.getElementById('auth-form');
+        const authToggle = document.getElementById('auth-toggle');
+        const authTitle = document.getElementById('auth-title');
+        const authError = document.getElementById('auth-error');
+        const signOutButton = document.getElementById('sign-out');
+        const themeToggle = document.getElementById('theme-toggle');
+        const todoForm = document.getElementById('todo-form');
+        const todoInput = document.getElementById('todo-input');
+        const todoList = document.getElementById('todo-list');
+        const loading = document.getElementById('loading');
+        const syncStatus = document.getElementById('sync-status');
+        const userInfo = document.getElementById('user-info');
+        const googleSignInButton = document.getElementById('google-signin');
+
+        let isLoginMode = true;
+
+        // Authentication
+        authToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLoginMode = !isLoginMode;
+            authTitle.textContent = isLoginMode ? 'Login' : 'Sign Up';
+            authToggle.textContent = isLoginMode ? 'Sign up' : 'Login';
+            authForm.querySelector('button[type="submit"]').textContent = isLoginMode ? 'Login' : 'Sign Up';
+            authError.textContent = '';
+        });
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = authForm.querySelector('#auth-email').value;
+            const password = authForm.querySelector('#auth-password').value;
+
+            try {
+                if (isLoginMode) {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } else {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                }
+            } catch (error) {
+                authError.textContent = error.message;
+            }
+        });
+
+        googleSignInButton.addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                authError.textContent = error.message;
+            }
+        });
+
+        signOutButton.addEventListener('click', () => {
+            signOut(auth).catch((error) => {
+                console.error('Sign out error:', error);
+            });
+        });
+
+        // Auth state observer
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                authContainer.style.display = 'none';
+                appContainer.style.display = 'block';
+                userInfo.textContent = `Logged in as: ${user.email}`;
+                loadTodos();
+            } else {
+                authContainer.style.display = 'block';
+                appContainer.style.display = 'none';
+                userInfo.textContent = '';
+                todoList.innerHTML = '';
+            }
+        });
+
+        // Theme toggle
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+
+        // Todo operations
+        async function addTodo(text) {
+            try {
+                await addDoc(collection(db, 'todos'), {
+                    text,
+                    completed: false,
+                    userId: auth.currentUser.uid,
+                    createdAt: new Date()
+                });
+                updateSyncStatus('Todo added successfully');
+            } catch (error) {
+                console.error('Error adding todo:', error);
+                updateSyncStatus('Error adding todo');
+            }
+        }
+
+        async function toggleTodo(id, completed) {
+            try {
+                await updateDoc(doc(db, 'todos', id), { completed });
+                updateSyncStatus('Todo updated successfully');
+            } catch (error) {
+                console.error('Error updating todo:', error);
+                updateSyncStatus('Error updating todo');
+            }
+        }
+
+        async function deleteTodo(id) {
+            try {
+                await deleteDoc(doc(db, 'todos', id));
+                updateSyncStatus('Todo deleted successfully');
+            } catch (error) {
+                console.error('Error deleting todo:', error);
+                updateSyncStatus('Error deleting todo');
+            }
+        }
+
+        function loadTodos() {
+            loading.style.display = 'block';
+            const q = query(collection(db, 'todos'), where('userId', '==', auth.currentUser.uid));
+            onSnapshot(q, (snapshot) => {
+                todoList.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const todo = doc.data();
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${todo.text}</span>
+                        <div>
+                            <input type="checkbox" ${todo.completed ? 'checked' : ''}>
+                            <button class="delete">Delete</button>
+                        </div>
+                    `;
+                    li.querySelector('input').addEventListener('change', (e) => toggleTodo(doc.id, e.target.checked));
+                    li.querySelector('.delete').addEventListener('click', () => deleteTodo(doc.id));
+                    todoList.appendChild(li);
+                });
+                loading.style.display = 'none';
+                updateSyncStatus('Todos loaded successfully');
+            }, (error) => {
+                console.error('Error loading todos:', error);
+                loading.style.display = 'none';
+                updateSyncStatus('Error loading todos');
+            });
+        }
+
+        todoForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = todoInput.value.trim();
+            if (text) {
+                addTodo(text);
+                todoInput.value = '';
+            }
+        });
+
+        function updateSyncStatus(message) {
+            syncStatus.textContent = message;
+            setTimeout(() => {
+                syncStatus.textContent = '';
+            }, 3000);
+        }
+
+        // Offline support
+        window.addEventListener('online', () => {
+            updateSyncStatus('Back online. Syncing...');
+        });
+
+        window.addEventListener('offline', () => {
+            updateSyncStatus('You are offline. Changes will sync when you are back online.');
+        });
+    </script>
+</body>
+</html>
