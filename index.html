@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Todo App</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastify-js/1.12.0/toastify.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4285F4;
-            --secondary-color: #f1f1f1;
+            --primary-color: #8A2BE2;
+            --secondary-color: #E6E6FA;
             --text-color: #333;
             --background-color: #fff;
         }
@@ -18,24 +19,47 @@
             color: var(--text-color);
             background-color: var(--background-color);
             margin: 0;
-            padding: 20px;
+            padding: 0;
             transition: background-color 0.3s ease;
         }
 
-        .dark-mode {
-            --primary-color: #3367D6;
-            --secondary-color: #333;
-            --text-color: #f1f1f1;
-            --background-color: #222;
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
         }
 
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: var(--secondary-color);
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-image: url('https://github.com/anandvip/kali-yuga/blob/main/todosmall.png?raw=true');
+            background-size: cover;
+            background-position: center;
+            margin-left: 20px;
+        }
+
+        .user-info {
+            margin-right: 20px;
+        }
+
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
         }
 
         h1, h2 {
@@ -46,19 +70,18 @@
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--primary-color);
             border-radius: 4px;
         }
 
         button {
             background-color: var(--primary-color);
-            color: #fff;
+            color: white;
             border: none;
             padding: 10px 15px;
             cursor: pointer;
             border-radius: 4px;
             transition: background-color 0.3s ease;
-            margin-right: 10px;
         }
 
         button:hover {
@@ -78,6 +101,7 @@
             justify-content: space-between;
             align-items: center;
             border-radius: 4px;
+            cursor: move;
         }
 
         .error {
@@ -94,11 +118,6 @@
             margin-top: 20px;
         }
 
-        #sync-status {
-            margin-top: 10px;
-            font-style: italic;
-        }
-
         .google-btn {
             background-color: #DB4437;
         }
@@ -111,27 +130,31 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="auth-container">
-            <h2 id="auth-title">Login</h2>
-            <div id="auth-error" class="error"></div>
-            <form id="auth-form">
-                <input type="email" id="auth-email" placeholder="Email" required>
-                <input type="password" id="auth-password" placeholder="Password" required>
-                <div class="auth-options">
-                    <button type="submit" id="auth-submit">Login</button>
-                    <button type="button" id="google-signin" class="google-btn">Sign in with Google</button>
-                </div>
-            </form>
-            <p id="auth-switch">Don't have an account? <a href="#" id="auth-toggle">Sign up</a></p>
-        </div>
+    <div id="auth-container" class="container">
+        <h2 id="auth-title">Login</h2>
+        <div id="auth-error" class="error"></div>
+        <form id="auth-form">
+            <input type="email" id="auth-email" placeholder="Email" required>
+            <input type="password" id="auth-password" placeholder="Password" required>
+            <div class="auth-options">
+                <button type="submit" id="auth-submit">Login</button>
+                <button type="button" id="google-signin" class="google-btn">Sign in with Google</button>
+            </div>
+        </form>
+        <p id="auth-switch">Don't have an account? <a href="#" id="auth-toggle">Sign up</a></p>
+    </div>
 
-        <div id="app-container">
+    <div id="app-container">
+        <header>
+            <div class="logo"></div>
+            <div class="user-info">
+                <span id="user-name"></span>
+                <button id="sign-out">Sign Out</button>
+            </div>
+        </header>
+
+        <div class="container">
             <h1>Advanced Todo App</h1>
-            <div id="user-info"></div>
-            <button id="sign-out">Sign Out</button>
-            <button id="theme-toggle">Toggle Theme</button>
-            <div id="sync-status"></div>
             <form id="todo-form">
                 <input type="text" id="todo-input" placeholder="Enter a new todo" required>
                 <button type="submit">Add Todo</button>
@@ -139,8 +162,14 @@
             <ul id="todo-list"></ul>
             <div class="loading" id="loading">Loading...</div>
         </div>
+
+        <footer>
+            <p>&copy; 2024 Advanced Todo App. All rights reserved.</p>
+        </footer>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastify-js/1.12.0/toastify.js"></script>
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
@@ -170,13 +199,11 @@
         const authTitle = document.getElementById('auth-title');
         const authError = document.getElementById('auth-error');
         const signOutButton = document.getElementById('sign-out');
-        const themeToggle = document.getElementById('theme-toggle');
         const todoForm = document.getElementById('todo-form');
         const todoInput = document.getElementById('todo-input');
         const todoList = document.getElementById('todo-list');
         const loading = document.getElementById('loading');
-        const syncStatus = document.getElementById('sync-status');
-        const userInfo = document.getElementById('user-info');
+        const userNameElement = document.getElementById('user-name');
         const googleSignInButton = document.getElementById('google-signin');
 
         let isLoginMode = true;
@@ -203,7 +230,7 @@
                     await createUserWithEmailAndPassword(auth, email, password);
                 }
             } catch (error) {
-                authError.textContent = error.message;
+                showToast(error.message, 'error');
             }
         });
 
@@ -212,13 +239,14 @@
             try {
                 await signInWithPopup(auth, provider);
             } catch (error) {
-                authError.textContent = error.message;
+                showToast(error.message, 'error');
             }
         });
 
         signOutButton.addEventListener('click', () => {
             signOut(auth).catch((error) => {
                 console.error('Sign out error:', error);
+                showToast('Error signing out', 'error');
             });
         });
 
@@ -227,19 +255,15 @@
             if (user) {
                 authContainer.style.display = 'none';
                 appContainer.style.display = 'block';
-                userInfo.textContent = `Logged in as: ${user.email}`;
+                userNameElement.textContent = user.email;
                 loadTodos();
+                showToast('Logged in successfully', 'success');
             } else {
                 authContainer.style.display = 'block';
                 appContainer.style.display = 'none';
-                userInfo.textContent = '';
+                userNameElement.textContent = '';
                 todoList.innerHTML = '';
             }
-        });
-
-        // Theme toggle
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
         });
 
         // Todo operations
@@ -251,30 +275,30 @@
                     userId: auth.currentUser.uid,
                     createdAt: new Date()
                 });
-                updateSyncStatus('Todo added successfully');
+                showToast('Todo added successfully', 'success');
             } catch (error) {
                 console.error('Error adding todo:', error);
-                updateSyncStatus('Error adding todo');
+                showToast('Error adding todo', 'error');
             }
         }
 
         async function toggleTodo(id, completed) {
             try {
                 await updateDoc(doc(db, 'todos', id), { completed });
-                updateSyncStatus('Todo updated successfully');
+                showToast('Todo updated successfully', 'success');
             } catch (error) {
                 console.error('Error updating todo:', error);
-                updateSyncStatus('Error updating todo');
+                showToast('Error updating todo', 'error');
             }
         }
 
         async function deleteTodo(id) {
             try {
                 await deleteDoc(doc(db, 'todos', id));
-                updateSyncStatus('Todo deleted successfully');
+                showToast('Todo deleted successfully', 'success');
             } catch (error) {
                 console.error('Error deleting todo:', error);
-                updateSyncStatus('Error deleting todo');
+                showToast('Error deleting todo', 'error');
             }
         }
 
@@ -298,11 +322,11 @@
                     todoList.appendChild(li);
                 });
                 loading.style.display = 'none';
-                updateSyncStatus('Todos loaded successfully');
+                initSortable();
             }, (error) => {
                 console.error('Error loading todos:', error);
                 loading.style.display = 'none';
-                updateSyncStatus('Error loading todos');
+                showToast('Error loading todos', 'error');
             });
         }
 
@@ -315,20 +339,33 @@
             }
         });
 
-        function updateSyncStatus(message) {
-            syncStatus.textContent = message;
-            setTimeout(() => {
-                syncStatus.textContent = '';
-            }, 3000);
+        // Make list items draggable
+        function initSortable() {
+            new Sortable(todoList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost'
+            });
+        }
+
+        // Toast notifications
+        function showToast(message, type = 'info') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: type === 'error' ? "linear-gradient(to right, #ff5f6d, #ffc371)" : "linear-gradient(to right, #00b09b, #96c93d)",
+            }).showToast();
         }
 
         // Offline support
         window.addEventListener('online', () => {
-            updateSyncStatus('Back online. Syncing...');
+            showToast('Back online. Syncing...', 'info');
         });
 
         window.addEventListener('offline', () => {
-            updateSyncStatus('You are offline. Changes will sync when you are back online.');
+            showToast('You are offline. Changes will sync when you are back online.', 'info');
         });
     </script>
 </body>
