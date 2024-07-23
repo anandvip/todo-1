@@ -6,10 +6,19 @@
     <title>Advanced Todo App</title>
     <style>
         :root {
-            --primary-color: #4285F4;
-            --secondary-color: #f1f1f1;
+            --primary-color: #8A2BE2;
+            --secondary-color: #E6E6FA;
             --text-color: #333;
-            --background-color: #fff;
+            --background-color: #F8F8FF;
+            --todo-background: #fff;
+        }
+
+        .dark-mode {
+            --primary-color: #9370DB;
+            --secondary-color: #483D8B;
+            --text-color: #F8F8FF;
+            --background-color: #1A1A1A;
+            --todo-background: #2C2C2C;
         }
 
         body {
@@ -18,28 +27,45 @@
             color: var(--text-color);
             background-color: var(--background-color);
             margin: 0;
-            padding: 20px;
-            transition: background-color 0.3s ease;
+            padding: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            background-image: url('https://images.unsplash.com/photo-1678210111227-972c68468a6e?crop=entropy&cs=srgb&fm=jpg&ixid=M3wzMjM4NDZ8MHwxfHJhbmRvbXx8fHx8fHx8fDE3MjE3MDI2NjV8&ixlib=rb-4.0.3&q=85');
+            background-size: cover;
         }
 
-        .dark-mode {
-            --primary-color: #3367D6;
-            --secondary-color: #333;
-            --text-color: #f1f1f1;
-            --background-color: #222;
+        .wrapper {
+            display: grid;
+            grid-template-rows: auto auto;
+            gap: 20px;
+            justify-items: center;
+        }
+
+        .logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-image: url('https://github.com/anandvip/kali-yuga/blob/main/todosmall.png?raw=true');
+            background-size: cover;
+            background-position: center;
+            border: 5px solid var(--primary-color);
         }
 
         .container {
+            width: 100%;
             max-width: 600px;
-            margin: 0 auto;
             background-color: var(--secondary-color);
             padding: 20px;
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: background-color 0.3s ease;
         }
 
         h1, h2 {
             color: var(--primary-color);
+            text-align: center;
         }
 
         input[type="text"], input[type="email"], input[type="password"] {
@@ -48,6 +74,10 @@
             margin-bottom: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            box-sizing: border-box;
+            background-color: var(--todo-background);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         button {
@@ -58,7 +88,6 @@
             cursor: pointer;
             border-radius: 4px;
             transition: background-color 0.3s ease;
-            margin-right: 10px;
         }
 
         button:hover {
@@ -71,13 +100,15 @@
         }
 
         li {
-            background-color: var(--secondary-color);
+            background-color: var(--todo-background);
             margin-bottom: 10px;
             padding: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-radius: 4px;
+            cursor: move;
+            transition: background-color 0.3s ease;
         }
 
         .error {
@@ -97,55 +128,90 @@
         #sync-status {
             margin-top: 10px;
             font-style: italic;
+            text-align: center;
         }
 
-        .google-btn {
-            background-color: #DB4437;
+        .google-btn, .email-link-btn {
+            background-color: #fff;
+            color: #757575;
+            border: 1px solid #757575;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .google-btn img, .email-link-btn img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
         }
 
         .auth-options {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            gap: 10px;
             margin-top: 10px;
+        }
+
+        #theme-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        #auth-name {
+            display: none; /* Initially hidden for login mode */
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="auth-container">
-            <h2 id="auth-title">Login</h2>
-            <div id="auth-error" class="error"></div>
-            <form id="auth-form">
-                <input type="email" id="auth-email" placeholder="Email" required>
-                <input type="password" id="auth-password" placeholder="Password" required>
-                <div class="auth-options">
-                    <button type="submit" id="auth-submit">Login</button>
-                    <button type="button" id="google-signin" class="google-btn">Sign in with Google</button>
-                </div>
-            </form>
-            <p id="auth-switch">Don't have an account? <a href="#" id="auth-toggle">Sign up</a></p>
-        </div>
-
-        <div id="app-container">
-            <h1>Advanced Todo App</h1>
-            <div id="user-info"></div>
-            <button id="sign-out">Sign Out</button>
+    <div class="wrapper">
+        <div class="logo"></div>
+        <div class="container">
             <button id="theme-toggle">Toggle Theme</button>
-            <div id="sync-status"></div>
-            <form id="todo-form">
-                <input type="text" id="todo-input" placeholder="Enter a new todo" required>
-                <button type="submit">Add Todo</button>
-            </form>
-            <ul id="todo-list"></ul>
-            <div class="loading" id="loading">Loading...</div>
+            <div id="auth-container">
+                <h2 id="auth-title">Login</h2>
+                <div id="auth-error" class="error"></div>
+                <form id="auth-form">
+                    <input type="text" id="auth-name" placeholder="Name" required>
+                    <input type="email" id="auth-email" placeholder="Email" required>
+                    <input type="password" id="auth-password" placeholder="Password" required>
+                    <div class="auth-options">
+                        <button type="submit" id="auth-submit">Login</button>
+                        <button type="button" id="google-signin" class="google-btn">
+                            <img src="https://github.com/anandvip/kali-yuga/blob/main/todosmall.png?raw=true" alt="Google Logo">
+                            Sign in with Google
+                        </button>
+                        <button type="button" id="email-link-signin" class="email-link-btn">
+                            <img src="https://github.com/anandvip/kali-yuga/blob/main/todosmall.png?raw=true" alt="Email Logo">
+                            Sign in with Email Link
+                        </button>
+                    </div>
+                </form>
+                <p id="auth-switch">Don't have an account? <a href="#" id="auth-toggle">Sign up</a></p>
+            </div>
+
+            <div id="app-container">
+                <h1>Advanced Todo App</h1>
+                <div id="user-info"></div>
+                <button id="sign-out">Sign Out</button>
+                <div id="sync-status"></div>
+                <form id="todo-form">
+                    <input type="text" id="todo-input" placeholder="Enter a new todo" required>
+                    <button type="submit">Add Todo</button>
+                </form>
+                <ul id="todo-list"></ul>
+                <div class="loading" id="loading">Loading...</div>
+            </div>
         </div>
     </div>
 
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, updateProfile, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, deleteDoc, doc, orderBy } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -178,6 +244,8 @@
         const syncStatus = document.getElementById('sync-status');
         const userInfo = document.getElementById('user-info');
         const googleSignInButton = document.getElementById('google-signin');
+        const emailLinkSignInButton = document.getElementById('email-link-signin');
+        const authNameField = document.getElementById('auth-name');
 
         let isLoginMode = true;
 
@@ -189,10 +257,15 @@
             authToggle.textContent = isLoginMode ? 'Sign up' : 'Login';
             authForm.querySelector('button[type="submit"]').textContent = isLoginMode ? 'Login' : 'Sign Up';
             authError.textContent = '';
+            
+            // Toggle visibility of name field
+            authNameField.style.display = isLoginMode ? 'none' : 'block';
+            authNameField.required = !isLoginMode;
         });
 
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const name = authNameField.value;
             const email = authForm.querySelector('#auth-email').value;
             const password = authForm.querySelector('#auth-password').value;
 
@@ -200,7 +273,8 @@
                 if (isLoginMode) {
                     await signInWithEmailAndPassword(auth, email, password);
                 } else {
-                    await createUserWithEmailAndPassword(auth, email, password);
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    await updateProfile(userCredential.user, { displayName: name });
                 }
             } catch (error) {
                 authError.textContent = error.message;
@@ -216,6 +290,42 @@
             }
         });
 
+        emailLinkSignInButton.addEventListener('click', async () => {
+            const email = authForm.querySelector('#auth-email').value;
+            if (!email) {
+                authError.textContent = "Please enter your email address.";
+                return;
+            }
+
+            const actionCodeSettings = {
+                url: window.location.href,
+                handleCodeInApp: true
+            };
+
+            try {
+                await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+                window.localStorage.setItem('emailForSignIn', email);
+                authError.textContent = "Check your email for the sign-in link.";
+            } catch (error) {
+                authError.textContent = error.message;
+            }
+        });
+
+        // Check if the URL contains a sign-in link
+        if (isSignInWithEmailLink(auth, window.location.href)) {
+            let email = window.localStorage.getItem('emailForSignIn');
+            if (!email) {
+                email = window.prompt('Please provide your email for confirmation');
+            }
+            signInWithEmailLink(auth, email, window.location.href)
+                .then((result) => {
+                    window.localStorage.removeItem('emailForSignIn');
+                })
+                .catch((error) => {
+                    authError.textContent = error.message;
+                });
+        }
+
         signOutButton.addEventListener('click', () => {
             signOut(auth).catch((error) => {
                 console.error('Sign out error:', error);
@@ -227,19 +337,37 @@
             if (user) {
                 authContainer.style.display = 'none';
                 appContainer.style.display = 'block';
-                userInfo.textContent = `Logged in as: ${user.email}`;
+                
+                const displayName = user.displayName || user.email.split('@')[0];
+                userInfo.textContent = `Logged in as: ${displayName}`;
+                
                 loadTodos();
             } else {
                 authContainer.style.display = 'block';
                 appContainer.style.display = 'none';
                 userInfo.textContent = '';
                 todoList.innerHTML = '';
+                
+                // Reset form and show/hide fields appropriately
+                authForm.reset();
+                authNameField.style.display = isLoginMode ? 'none' : 'block';
+                authNameField.required = !isLoginMode;
             }
         });
 
         // Theme toggle
+        function setTheme(isDark) {
+            document.body.classList.toggle('dark-mode', isDark);
+            localStorage.setItem('darkMode', isDark);
+        }
+
+        // Check for saved theme preference or default to light mode
+        const savedTheme = localStorage.getItem('darkMode');
+        setTheme(savedTheme === 'true');
+
         themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.toggle('dark-mode');
+            setTheme(isDarkMode);
         });
 
         // Todo operations
@@ -249,22 +377,13 @@
                     text,
                     completed: false,
                     userId: auth.currentUser.uid,
-                    createdAt: new Date()
+                    createdAt: new Date(),
+                    order: Date.now()
                 });
                 updateSyncStatus('Todo added successfully');
             } catch (error) {
                 console.error('Error adding todo:', error);
                 updateSyncStatus('Error adding todo');
-            }
-        }
-
-        async function toggleTodo(id, completed) {
-            try {
-                await updateDoc(doc(db, 'todos', id), { completed });
-                updateSyncStatus('Todo updated successfully');
-            } catch (error) {
-                console.error('Error updating todo:', error);
-                updateSyncStatus('Error updating todo');
             }
         }
 
@@ -278,14 +397,24 @@
             }
         }
 
+        async function updateTodoOrder(id, newOrder) {
+            try {
+                await updateDoc(doc(db, 'todos', id), { order: newOrder });
+            } catch (error) {
+                console.error('Error updating todo order:', error);
+            }
+        }
+
         function loadTodos() {
             loading.style.display = 'block';
-            const q = query(collection(db, 'todos'), where('userId', '==', auth.currentUser.uid));
+            const q = query(collection(db, 'todos'), where('userId', '==', auth.currentUser.uid), orderBy('order'));
             onSnapshot(q, (snapshot) => {
                 todoList.innerHTML = '';
                 snapshot.forEach((doc) => {
                     const todo = doc.data();
                     const li = document.createElement('li');
+                    li.draggable = true;
+                    li.dataset.id = doc.id;
                     li.innerHTML = `
                         <span>${todo.text}</span>
                         <div>
@@ -295,6 +424,9 @@
                     `;
                     li.querySelector('input').addEventListener('change', (e) => toggleTodo(doc.id, e.target.checked));
                     li.querySelector('.delete').addEventListener('click', () => deleteTodo(doc.id));
+                    li.addEventListener('dragstart', dragStart);
+                    li.addEventListener('dragover', dragOver);
+                    li.addEventListener('drop', drop);
                     todoList.appendChild(li);
                 });
                 loading.style.display = 'none';
@@ -320,6 +452,40 @@
             setTimeout(() => {
                 syncStatus.textContent = '';
             }, 3000);
+        }
+
+        // Drag and drop functionality
+        let draggedItem = null;
+
+        function dragStart(e) {
+            draggedItem = e.target;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.innerHTML);
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function drop(e) {
+            e.preventDefault();
+            if (e.target.tagName === 'LI' && e.target !== draggedItem) {
+                const allItems = Array.from(todoList.children);
+                const oldIndex = allItems.indexOf(draggedItem);
+                const newIndex = allItems.indexOf(e.target);
+
+                if (oldIndex < newIndex) {
+                    todoList.insertBefore(draggedItem, e.target.nextSibling);
+                } else {
+                    todoList.insertBefore(draggedItem, e.target);
+                }
+
+                // Update order in Firestore
+                allItems.forEach((item, index) => {
+                    updateTodoOrder(item.dataset.id, index);
+                });
+            }
         }
 
         // Offline support
