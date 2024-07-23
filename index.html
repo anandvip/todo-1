@@ -6,10 +6,10 @@
     <title>Advanced Todo App</title>
     <style>
         :root {
-            --primary-color: #8A2BE2;
-            --secondary-color: #E6E6FA;
+            --primary-color: #4285F4;
+            --secondary-color: #f1f1f1;
             --text-color: #333;
-            --background-color: #F8F8FF;
+            --background-color: #fff;
         }
 
         body {
@@ -23,10 +23,10 @@
         }
 
         .dark-mode {
-            --primary-color: #9370DB;
-            --secondary-color: #483D8B;
-            --text-color: #E6E6FA;
-            --background-color: #4B0082;
+            --primary-color: #3367D6;
+            --secondary-color: #333;
+            --text-color: #f1f1f1;
+            --background-color: #222;
         }
 
         .container {
@@ -36,22 +36,6 @@
             padding: 20px;
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            position: relative;
-          margin-top:50px
-        }
-
-        .logo {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background-image: url('https://github.com/anandvip/kali-yuga/blob/main/todosmall.png?raw=true');
-            background-size: cover;
-            background-position: center;
-            position: absolute;
-            top: -50px;
-            left: 50%;
-            transform: translateX(-50%);
-            border: 5px solid var(--primary-color);
         }
 
         h1, h2 {
@@ -94,7 +78,6 @@
             justify-content: space-between;
             align-items: center;
             border-radius: 4px;
-            cursor: move;
         }
 
         .error {
@@ -129,7 +112,6 @@
 </head>
 <body>
     <div class="container">
-        <div class="logo"></div>
         <div id="auth-container">
             <h2 id="auth-title">Login</h2>
             <div id="auth-error" class="error"></div>
@@ -163,7 +145,7 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, deleteDoc, doc, orderBy } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -245,7 +227,7 @@
             if (user) {
                 authContainer.style.display = 'none';
                 appContainer.style.display = 'block';
-                userInfo.textContent = `Namaskaram: ${user.name}`;
+                userInfo.textContent = `Logged in as: ${user.email}`;
                 loadTodos();
             } else {
                 authContainer.style.display = 'block';
@@ -267,8 +249,7 @@
                     text,
                     completed: false,
                     userId: auth.currentUser.uid,
-                    createdAt: new Date(),
-                    order: Date.now() // Add an order field
+                    createdAt: new Date()
                 });
                 updateSyncStatus('Todo added successfully');
             } catch (error) {
@@ -297,24 +278,14 @@
             }
         }
 
-        async function updateTodoOrder(id, newOrder) {
-            try {
-                await updateDoc(doc(db, 'todos', id), { order: newOrder });
-            } catch (error) {
-                console.error('Error updating todo order:', error);
-            }
-        }
-
         function loadTodos() {
             loading.style.display = 'block';
-            const q = query(collection(db, 'todos'), where('userId', '==', auth.currentUser.uid), orderBy('order'));
+            const q = query(collection(db, 'todos'), where('userId', '==', auth.currentUser.uid));
             onSnapshot(q, (snapshot) => {
                 todoList.innerHTML = '';
                 snapshot.forEach((doc) => {
                     const todo = doc.data();
                     const li = document.createElement('li');
-                    li.draggable = true;
-                    li.dataset.id = doc.id;
                     li.innerHTML = `
                         <span>${todo.text}</span>
                         <div>
@@ -324,9 +295,6 @@
                     `;
                     li.querySelector('input').addEventListener('change', (e) => toggleTodo(doc.id, e.target.checked));
                     li.querySelector('.delete').addEventListener('click', () => deleteTodo(doc.id));
-                    li.addEventListener('dragstart', dragStart);
-                    li.addEventListener('dragover', dragOver);
-                    li.addEventListener('drop', drop);
                     todoList.appendChild(li);
                 });
                 loading.style.display = 'none';
@@ -352,40 +320,6 @@
             setTimeout(() => {
                 syncStatus.textContent = '';
             }, 3000);
-        }
-
-        // Drag and drop functionality
-        let draggedItem = null;
-
-        function dragStart(e) {
-            draggedItem = e.target;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', e.target.innerHTML);
-        }
-
-        function dragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        }
-
-        function drop(e) {
-            e.preventDefault();
-            if (e.target.tagName === 'LI' && e.target !== draggedItem) {
-                const allItems = Array.from(todoList.children);
-                const oldIndex = allItems.indexOf(draggedItem);
-                const newIndex = allItems.indexOf(e.target);
-
-                if (oldIndex < newIndex) {
-                    todoList.insertBefore(draggedItem, e.target.nextSibling);
-                } else {
-                    todoList.insertBefore(draggedItem, e.target);
-                }
-
-                // Update order in Firestore
-                allItems.forEach((item, index) => {
-                    updateTodoOrder(item.dataset.id, index);
-                });
-            }
         }
 
         // Offline support
